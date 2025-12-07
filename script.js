@@ -864,18 +864,63 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileProfileMenu = document.getElementById('mobileProfileMenu');
     const mobileProfileNameEl = document.getElementById('mobileProfileName');
     const mobileProfileEmailEl = document.getElementById('mobileProfileEmail');
-    const mobileTotalTransactionsEl = document.getElementById('mobileTotalTransactions');
+    const mobileProfileMemberEl = document.getElementById('mobileProfileMember');
+    const mobileProfilePhotoEl = document.getElementById('mobileProfilePhoto');
+    const mobileProfileIconEl = document.getElementById('mobileProfileIcon');
 
-    if (mobileTotalTransactionsEl) {
-        mobileTotalTransactionsEl.textContent = transactions.length;
+    // Calculate financial stats for current month
+    let budgetAmount = 0;
+    let totalSpend = 0;
+    let balance = 0;
+    if (currentDateRange && currentDateRange !== 'All') {
+        const budgetId = getBudgetIdForDateRange(currentDateRange);
+        const budgetEntry = budgets.find(b => b.id === budgetId);
+        budgetAmount = budgetEntry ? budgetEntry.budget : 0;
+        totalSpend = transactions.filter(t => t.budget_id === budgetId).reduce((sum, t) => sum + Math.abs(parseFloat(t.amount) || 0), 0);
+        balance = budgetAmount - totalSpend;
     }
 
-    if (mobileProfileMenu) {
-        mobileProfileMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Profile info is already displayed in the sidebar header
-        });
+    // Update mobile profile info
+    if (mobileProfileNameEl) mobileProfileNameEl.textContent = currentUser?.name || 'User';
+    if (mobileProfileEmailEl) mobileProfileEmailEl.textContent = currentUser?.email || 'N/A';
+    if (mobileProfileMemberEl) {
+        const currentDate = new Date();
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        mobileProfileMemberEl.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
     }
+    if (mobileProfilePhotoEl && mobileProfileIconEl) {
+        if (currentUser?.photo) {
+            mobileProfilePhotoEl.src = currentUser.photo;
+            mobileProfilePhotoEl.style.display = 'block';
+            mobileProfileIconEl.style.display = 'none';
+        } else {
+            mobileProfilePhotoEl.style.display = 'none';
+            mobileProfileIconEl.style.display = 'flex';
+        }
+    }
+
+    // Add financial stats to mobile profile (append if not present)
+    let statsContainer = document.getElementById('mobileProfileStats');
+    if (!statsContainer && mobileProfileMenu) {
+        statsContainer = document.createElement('div');
+        statsContainer.id = 'mobileProfileStats';
+        statsContainer.style.marginTop = '10px';
+        statsContainer.innerHTML = `
+            <div style="font-size:0.95em;">
+                <span>💰 Income: <b id="mobileProfileIncome">${budgetAmount.toLocaleString(undefined, {style:'currency',currency:'USD'})}</b></span><br>
+                <span>💸 Spend: <b id="mobileProfileSpend">${totalSpend.toLocaleString(undefined, {style:'currency',currency:'USD'})}</b></span><br>
+                <span>💳 Balance: <b id="mobileProfileBalance">${balance.toLocaleString(undefined, {style:'currency',currency:'USD'})}</b></span>
+            </div>
+        `;
+        mobileProfileMenu.appendChild(statsContainer);
+    } else if (statsContainer) {
+        document.getElementById('mobileProfileIncome').textContent = budgetAmount.toLocaleString(undefined, {style:'currency',currency:'USD'});
+        document.getElementById('mobileProfileSpend').textContent = totalSpend.toLocaleString(undefined, {style:'currency',currency:'USD'});
+        document.getElementById('mobileProfileBalance').textContent = balance.toLocaleString(undefined, {style:'currency',currency:'USD'});
+    }
+
+    // Month dropdown refresh
+    if (typeof populateMonthDropdown === 'function') populateMonthDropdown();
 
     // Settings modal
     const settingsModal = document.getElementById('settingsModal');
